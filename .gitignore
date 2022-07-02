@@ -8,7 +8,6 @@ node_modules
 .pnp.js
 
 # build
-/out
 /dist
 
 # keys
