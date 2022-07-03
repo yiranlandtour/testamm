@@ -35,6 +35,7 @@ pub struct AMM {
 #[near_bindgen]
 #[derive(BorshDeserialize, BorshSerialize, PanicOnDefault)]
 pub struct Pool {
+    owner_address: AccountId,
     token_a_address: AccountId,
     token_a_decimal: u8,
     token_a_symbol: String,
@@ -43,12 +44,15 @@ pub struct Pool {
     token_b_decimal: u8,
     token_b_symbol: String,
     token_b_pool_amount: Balance,
+    // lp_token: AccountId,
+    // mine_token: AccountId,
 }
 
 #[near_bindgen]
 impl Pool {
     #[private]
     fn new(
+        owner_address: AccountId,
         token_a_address: AccountId,
         token_a_decimal: u8,
         token_a_symbol: String,
@@ -57,6 +61,7 @@ impl Pool {
         token_b_symbol: String,
     ) -> Pool {
         Pool {
+            owner_address,
             token_a_address,
             token_a_decimal,
             token_a_symbol,
@@ -65,10 +70,12 @@ impl Pool {
             token_b_symbol,
             token_b_decimal,
             token_b_pool_amount: 0,
+            
         }
     }
     #[init]
     pub fn init_pool(
+        owner_address: AccountId,
         token_a_address: AccountId,
         token_a_decimal: u8,
         token_a_symbol: String,
@@ -82,6 +89,7 @@ impl Pool {
         //     token_b_symbol, token_b_decimal
         // );
         Self::new(
+            owner_address,
             token_a_address,
             token_a_decimal,
             token_a_symbol,
@@ -91,7 +99,7 @@ impl Pool {
         )
     }
 
-    pub fn get_ticker(&self) -> String {
+    pub fn get_name(&self) -> String {
         format!("{}-{}", self.token_a_symbol, self.token_b_symbol)
     }
 
@@ -106,8 +114,8 @@ impl Pool {
         self.token_b_pool_amount.into()
     }
 
-    /// is_positive: means use token a to exchange token b
-    /// K = self.token_a_pool_amount * self.token_b_pool_amount = (self.token_a_pool_amount' + added_token_a) * (self.token_b_pool_amount' - dec_token_b)
+    
+    
     pub fn get_ratio_atob(&self, pay_token_amount: U128, is_positive: bool) -> U128 {
         if self.token_a_pool_amount == 0 || self.token_b_pool_amount == 0 {
             return 0.into();
@@ -122,4 +130,6 @@ impl Pool {
             - (k / (self.token_b_pool_amount + Balance::from(pay_token_amount))))
         .into()
     }
+
+
 }
