@@ -78,6 +78,10 @@ impl Amm {
         account_asset_b: String,
 
     ) -> Self {
+        //only owner can init Amm pool
+        // if owner_address != env::signer_account_id(){
+            
+        // }
         ext_ft::ext(AccountId::from_str(&account_asset_a).unwrap())
             .ft_metadata()
             .and(ext_ft::ext(AccountId::from_str(&account_asset_a).unwrap()).ft_metadata())
@@ -156,7 +160,7 @@ impl Amm {
         self,
         sender_id: AccountId,
         amount: U128,
-        _msg: String,
+        is_positive_direction: bool,
     ) -> PromiseOrValue<U128> {
         if env::predecessor_account_id() != self.account_asset_a
             && env::predecessor_account_id() != self.account_asset_b
@@ -190,6 +194,7 @@ impl Amm {
         counterparty: AccountId,
         token_received: AccountId,
         amount_received: U128,
+        is_positive_direction: bool,
     ) {
 
         let change_amount = self.get_ratio_atob(amount_received, is_positive_direction);
@@ -213,31 +218,5 @@ impl Amm {
         };
     }
 
-    // fn owner_deposit(
-    //     caller: &UserAccount,
-    //     token_account: &AccountId,
-    //     amount: Balance,
-    // ) -> ExecutionResult {
-    //     assert_eq!(caller.account_id.as_str(), AMM_OWNER);
-    //     let action = Action::Deposit(DepositAction {
-    //         amount_in: amount.into(),
-    //         is_positive_direction: token_account.as_str() == TOKEN_A_ACCOUNT,
-    //         min_amount_out: None,
-    //     });
-    //     let token_receive_msg = TokenReceiverMessage::Execute { actions: vec![action] };
-    //     let msg = serde_json::to_string(&token_receive_msg).unwrap();
-    //     caller.call(
-    //         token_account.clone(),
-    //         "ft_transfer_call",
-    //         &json!({
-    //             "receiver_id": AMM_ACCOUNT.to_string(),
-    //                 "amount": amount.to_string(),
-    //             "msg": msg,
-    //         })
-    //         .to_string()
-    //         .into_bytes(),
-    //         5 * GAS_FOR_FT_ON_TRANSFER + PROMISE_CALL + 5 * BASE_GAS,
-    //         1,
-    //     )
-    // }
+
 }
