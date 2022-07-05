@@ -11,6 +11,8 @@ use near_sdk::json_types::U128;
 use near_sdk::{env, ext_contract, near_bindgen, AccountId, Balance,PanicOnDefault, PromiseOrValue};
 use near_contract_standards::fungible_token::metadata::FungibleTokenMetadata;
 
+use near_sdk_sim::lazy_static_include::syn::token;
+use near_sdk_sim::{init_simulator, ExecutionResult, UserAccount, DEFAULT_GAS};
 use response::MetadataTokens;
 use utils::parse_promise_result;
 
@@ -189,37 +191,19 @@ impl Amm {
         amount_received: U128,
         is_positive_direction: bool,
     ) {
-        let balance_token_a: u128 = parse_promise_result::<U128>(&promise_result(0))
-            .unwrap()
-            .into();
-        let balance_token_b: u128 = parse_promise_result::<U128>(&promise_result(1))
-            .unwrap()
-            .into();
 
-        let amount_received: u128 = amount_received.into();
-
-        let acc_a = self.account_asset_a.clone();
-        let acc_b = self.account_asset_b.clone();
-
-        let previous_ratio = match token_received.clone() {
-            _acc_a => (balance_token_a - amount_received) * balance_token_b,
-            _acc_b => (balance_token_b - amount_received) * balance_token_a,
-            _ => env::panic_str("Unsupported asset"),
+        let change_amount = self.get_ratio_atob(amount_received, is_positive_direction);
+        let in_ft_contract = if is_positive_direction {
+            self.account_asset_a.clone()
+        } else {
+            self.account_asset_b.clone()
         };
 
-        match token_received {
-            _acc_a => {
-                let to_send = balance_token_b - previous_ratio / balance_token_a;
-                ext_ft_core::ext(acc_b).with_attached_deposit(1).ft_transfer(counterparty, U128(to_send), None);
+        ext_ft_core::ext(in_ft_contract).with_attached_deposit(1).ft_transfer(counterparty, change_amount, None);
 
-            }
-            _acc_b => {
-                let to_send = balance_token_a - previous_ratio / balance_token_b;
-                ext_ft_core::ext(acc_a).with_attached_deposit(1).ft_transfer(counterparty, U128(to_send), None);
-            }
-            _ => env::panic_str("Unsupported asset"),
+
         }
-    }
+    
 
     #[result_serializer(borsh)]
     pub fn metadata_tokens(self) -> MetadataTokens {
@@ -228,6 +212,34 @@ impl Amm {
             metadata_token_b: self.metadata_token_b.unwrap(),
         };
     }
+
+    // fn owner_deposit(
+    //     caller: &UserAccount,
+    //     token_account: &AccountId,
+    //     amount: Balance,
+    // ) -> ExecutionResult {
+    //     assert_eq!(caller.account_id.as_str(), AMM_OWNER);
+    //     let action = Action::Deposit(DepositAction {
+    //         amount_in: amount.into(),
+    //         is_positive_direction: token_account.as_str() == TOKEN_A_ACCOUNT,
+    //         min_amount_out: None,
+    //     });
+    //     let token_receive_msg = TokenReceiverMessage::Execute { actions: vec![action] };
+    //     let msg = serde_json::to_string(&token_receive_msg).unwrap();
+    //     caller.call(
+    //         token_account.clone(),
+    //         "ft_transfer_call",
+    //         &json!({
+    //             "receiver_id": AMM_ACCOUNT.to_string(),
+    //                 "amount": amount.to_string(),
+    //             "msg": msg,
+    //         })
+    //         .to_string()
+    //         .into_bytes(),
+    //         5 * GAS_FOR_FT_ON_TRANSFER + PROMISE_CALL + 5 * BASE_GAS,
+    //         1,
+    //     )
+    // }
 }
 
 
