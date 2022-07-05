@@ -190,7 +190,6 @@ impl Amm {
         counterparty: AccountId,
         token_received: AccountId,
         amount_received: U128,
-        is_positive_direction: bool,
     ) {
 
         let change_amount = self.get_ratio_atob(amount_received, is_positive_direction);
