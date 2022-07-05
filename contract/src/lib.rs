@@ -220,3 +220,77 @@ impl Amm {
 
 
 }
+
+#[cfg(all(test, not(target_arch = "wasm32")))]
+mod tests {
+    use super::*;
+    use crate::action::{Action, DepositAction};
+    use crate::token_receiver::TokenReceiverMessage;
+    use near_sdk::serde_json::{self, json};
+    use near_sdk::test_utils::VMContextBuilder;
+    use near_sdk::{testing_env, Balance};
+    use near_sdk_sim::{init_simulator, ExecutionResult, UserAccount, DEFAULT_GAS};
+
+    const AMM_ACCOUNT: &str = "near_amm_simple";
+    const AMM_OWNER: &str = "amm_owner";
+    const TOKEN_A_ACCOUNT: &str = "wnear";
+    const TOKEN_A_SYMBOL: &str = "WNEAR";
+    const TOKEN_A_OWNER: &str = "alice";
+    const TOKEN_A_DECIMALS: u8 = 8;
+    const TOKEN_A_REAL_WANTED: Balance = 21_000_000;
+    const TOKEN_B_ACCOUNT: &str = "wusdt";
+    const TOKEN_B_SYMBOL: &str = "WUSDT";
+    const TOKEN_B_OWNER: &str = "bob";
+    const TOKEN_B_DECIMALS: u8 = 8;
+    const TOKEN_B_REAL_WANTED: Balance = 1000_000_000;
+    const NEAR2YOCTO: u128 = 1000_000_000_000_000_000_000_000; // 10 ** 24
+
+    near_sdk_sim::lazy_static_include::lazy_static_include_bytes! {
+        // update `contract.wasm` for your contract's name
+        AMM_WASM_BYTES => "../res/amm.wasm",
+        // if you run `cargo build` without `--release` flag:
+        FT_TOEKN_WASM_BYTES => "../res/fungible_token.wasm",
+    }
+
+    fn new_amm() -> Amm {
+        Amm::new(
+            AccountId::new_unchecked(AMM_OWNER.to_string()),
+            AccountId::new_unchecked(TOKEN_B_ACCOUNT.to_string()),
+            AccountId::new_unchecked(TOKEN_B_ACCOUNT.to_string()),
+        )
+    }
+
+    #[test]
+    fn test_unit_new() {
+        let context = VMContextBuilder::new();
+        testing_env!(context.build());
+        let _contract = new_amm();
+    }
+
+    #[test]
+    fn test_unit_contract_info() {
+        let contract = new_amm();
+        assert_eq!("WBTC-WUSDT", contract.get_ticker());
+        assert_eq!((8, 8), contract.get_decimals());
+    }
+
+    #[test]
+    fn test_unit_get_ratio() {
+        let mut contract = new_amm();
+        let per_token_a_amount: Balance =
+            (10.0_f64.powi(contract.metadata_token_a.unwrap().decimals as i32) as i64) as Balance;
+        let per_token_b_amount: Balance =
+            (10.0_f64.powi(contract.metadata_token_b.unwrap().decimals as i32) as i64) as Balance;
+        contract.token_a_pool_amount = 10 * per_token_a_amount;
+        contract.token_b_pool_amount = 40_000 * per_token_b_amount;
+        let simul_token_b_amount =
+            contract.get_ratio_atob(U128::from(1 * per_token_a_amount), true);
+        let simul_token_b_without_decimal =
+            u128::from(simul_token_b_amount) / u128::from(per_token_b_amount);
+        assert_eq!(simul_token_b_without_decimal, 3636);
+
+        let simul_token_a_amount =
+            contract.get_ratio_atob(U128::from(4000 * per_token_a_amount), false);
+        assert_eq!(u128::from(simul_token_a_amount), 90909091);
+    }
+}
