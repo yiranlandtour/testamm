@@ -60,7 +60,7 @@ pub trait MetadataReceiver {
 
 #[ext_contract(ext_self_tokens)]
 pub trait TokenRelayer {
-    fn transfer_token(
+    fn cb_transfer_token(
         &self,
         counterparty: AccountId,
         token_received: AccountId,
@@ -156,6 +156,7 @@ impl Amm {
         self,
         sender_id: AccountId,
         amount: U128,
+        _msg: String,
     ) -> PromiseOrValue<U128> {
         if env::predecessor_account_id() != self.account_asset_a
             && env::predecessor_account_id() != self.account_asset_b
@@ -173,7 +174,7 @@ impl Amm {
             .ft_balance_of(this_id.clone())
             .and(ext_ft::ext(self.account_asset_b).ft_balance_of(this_id))
             .then(
-                ext_self_tokens::ext(env::current_account_id()).transfer_token(
+                ext_self_tokens::ext(env::current_account_id()).cb_transfer_token(
                     sender_id,
                     env::predecessor_account_id(),
                     amount,
@@ -184,12 +185,11 @@ impl Amm {
     }
 
     #[private]
-    pub fn transfer_token(
+    pub fn cb_transfer_token(
         self,
         counterparty: AccountId,
         token_received: AccountId,
         amount_received: U128,
-        is_positive_direction: bool,
     ) {
 
         let change_amount = self.get_ratio_atob(amount_received, is_positive_direction);
