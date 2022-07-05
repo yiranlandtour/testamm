@@ -49,7 +49,7 @@ pub trait FungibleToken {
 
 #[ext_contract(ext_self_metadata)]
 pub trait MetadataReceiver {
-    fn cb_initialization_metadata(&mut self) -> PromiseOrValue<U128>;
+    fn initialization_metadata(&mut self) -> PromiseOrValue<U128>;
 }
 
 #[ext_contract(ext_self_tokens)]
@@ -75,7 +75,7 @@ impl Amm {
         ext_ft::ext(AccountId::from_str(&account_asset_a).unwrap())
             .ft_metadata()
             .and(ext_ft::ext(AccountId::from_str(&account_asset_a).unwrap()).ft_metadata())
-            .then(ext_self_metadata::ext(env::current_account_id()).cb_initialization_metadata());
+            .then(ext_self_metadata::ext(env::current_account_id()).initialization_metadata());
 
         Self {
             owner_address: AccountId::from_str(&owner_address).unwrap(),
